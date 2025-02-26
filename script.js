@@ -2,40 +2,72 @@
 
 async function getDashboardData(city) {
   try {
-    const responseDestination = fetch(
+    const destinationPromise = fetch(
       `https://boolean-spec-frontend.vercel.app/freetestapi/destinations?search=${city}`
     ).then((res) => res.json());
 
-    const responseWeather = fetch(
+    const weatherPromise = fetch(
       `https://boolean-spec-frontend.vercel.app/freetestapi/weathers?search=${city}`
     ).then((res) => res.json());
 
-    const responseMainAirport = fetch(
+    const mainAirportPromise = fetch(
       `https://boolean-spec-frontend.vercel.app/freetestapi/airports?search=${city}`
     ).then((res) => res.json());
 
-    const [destination, weather, mainAirport] = await Promise.all([
-      responseDestination,
-      responseWeather,
-      responseMainAirport,
-    ]);
-    /* console.log("destination", destination);
-    console.log("weather", weather);
-    console.log("mainAirport", mainAirport); */
+    const [destinationResponse, weatherResponse, mainAirportResponse] =
+      await Promise.allSettled([
+        destinationPromise,
+        weatherPromise,
+        mainAirportPromise,
+      ]);
+
+    /* console.log("destinationResponse", destinationResponse);
+    console.log("weatherResponse", weatherResponse);
+    console.log("mainAirportResponse", mainAirportResponse); */
+
+    const destination = destinationResponse.value;
+    const weather = weatherResponse.value;
+    const mainAirport = mainAirportResponse.value;
+
+    if (destinationResponse.status !== `fulfilled`) {
+      console.error(
+        "Errore nella chiamata per la destinazione, ",
+        destinationResponse.reason
+      );
+    }
+    if (weatherResponse.status !== `fulfilled`) {
+      console.error(
+        "Errore nella chiamata per il meteo, ",
+        weatherResponse.reason
+      );
+    }
+    if (mainAirportResponse.status !== `fulfilled`) {
+      console.error(
+        "Errore nella chiamata per dell'aereoporto, ",
+        mainAirportResponse.reason
+      );
+    }
+
+    const isValidDestination =
+      destinationResponse.status === `fulfilled` && destination.length > 0;
+    const isValidWeather =
+      weatherResponse.status === `fulfilled` && weather.length > 0;
+    const isValidAirport =
+      mainAirportResponse.status === `fulfilled` && mainAirport.length > 0;
 
     return {
-      city: destination[0]?.name ?? null,
-      country: destination[0]?.country ?? null,
-      temperature: weather[0]?.temperature ?? null,
-      weather: weather[0]?.weather_description ?? null,
-      airport: mainAirport[0]?.name ?? null,
+      city: isValidDestination ? destination[0].name : null,
+      country: isValidDestination ? destination[0].country : null,
+      temperature: isValidWeather ? weather[0].temperature : null,
+      weather: isValidWeather ? weather[0].weather_description : null,
+      airport: isValidAirport ? mainAirport[0].name : null,
     };
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
-getDashboardData("vienna")
+getDashboardData("london")
   .then((data) => {
     console.log("Dasboard data:", data);
     let finalPhrase = "";
